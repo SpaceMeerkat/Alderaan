@@ -8,6 +8,7 @@ Created on Wed Dec 13 12:21:39 2017
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.interpolate import InterpolatedUnivariateSpline
 
 def data_loader(name):
         loc = '/home/jamesdawson/Documents/Data Analysis Project/MiniProjectAllData/Continuum_subtracted/'
@@ -19,8 +20,14 @@ def chi_squared(y_GS,y_template,sig_GS):
         chi = np.sum(((y_GS-(A*y_template))/sig_GS)**2)
         return chi
 
+def shifter(data,y_vals,velocity):
+        shifted = np.zeros(len(data))
+        for i in range(len(data)):
+                shifted[i] = data[i] + (velocity*data[i])
+        return shifted
+
 temp = data_loader('keck_k5')
-temp_x,temp_y,temp_err = temp[:-1,0],temp[:-1,1],temp[:-1,2]
+temp_x,temp_y,temp_err = temp[:,0],temp[:,1],temp[:,2]
 
 test_data = ['gs2000_01','gs2000_02','gs2000_03','gs2000_04','gs2000_05','gs2000_06','gs2000_07','gs2000_08','gs2000_09','gs2000_10','gs2000_11','gs2000_12','gs2000_13']
 
@@ -29,28 +36,37 @@ for i in range(len(test_data)):
         data.append(data_loader(test_data[i]))
 data = np.array(data)
 
+test = data_loader(test_data[1])
+testx,testy,testerr = test[:,0],test[:,1],test[:,2]
 
-def splitter(x,y,err,segments):
-        x = np.split(x, segments)
-        y = np.split(y, segments)
-        err = np.split(err, segments)
-        return x,y,err
-
-tempx,tempy,temperr = splitter(temp_x,temp_y,temp_err,60)
-tempx = tempx[11]
-tempy = tempy[11]
-temperr = temperr[11]
-
-testx,testy,testerr = splitter(data[0][:-1,0],data[0][:-1,1],data[0][:-1,2],60)
-
+###     Testing the velocity change effects     ###############################
 plt.figure()
-plt.subplot(211)
-plt.plot(temp_x,temp_y)
-plt.subplot(212)
-plt.plot(data[0][:-1,0],data[0][:-1,1])
+plt.subplot(311)
+plt.plot(temp_x,temp_y,'k')
+plt.subplot(312)
+plt.plot(temp_x,temp_y,'k')
+plt.plot(shifter(temp_x,temp_y,0.00001),temp_y,'b',alpha=0.3)
+plt.ylabel('I')
+plt.subplot(313)
+plt.plot(temp_x,temp_y,'k')
+plt.plot(shifter(temp_x,temp_y,-0.00001),temp_y,'r',alpha=0.3)
+plt.xlabel('$\lambda / \AA$')
+###############################################################################
 
-offsets = []
-std_offsets = []
+###     Spline function calculator      #######################################
+
+x = shifter(temp_x,temp_y,-0.25)
+
+x_new = np.linspace((x[0]-10),(x[-1]+10),10000)
+
+f = InterpolatedUnivariateSpline(x, temp_y, k=3)
+
+new_y = f(x_new)
+new_y[np.where(x_new < testx[0])] = 0
+new_y[np.where(x_new > testx[-1])] = 0
+
+###############################################################################
+'''
 
 for k in range(len(data)):
 
@@ -82,3 +98,4 @@ for k in range(len(data)):
 x = np.arange(1,len(offsets)+1,1)        
 plt.figure()        
 plt.plot(x,offsets)
+'''
