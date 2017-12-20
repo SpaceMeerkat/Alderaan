@@ -16,11 +16,13 @@ def data_loader(name):
         return data
 
 def chi_squared(y_GS,y_template,sig_GS):        
-        A = np.sum((y_GS*y_template)/(sig_GS**2)) /  np.sum( (y_GS**2)/(sig_GS**2))
-        chi = np.sum(((y_GS-(A*y_template))/sig_GS)**2)
-        return chi
+        Aa = np.sum((y_GS*y_template)/(sig_GS**2))
+        Ab = np.sum((y_template**2)/(sig_GS**2))
+        A = Aa/Ab
+        chi = np.sum( (((y_GS-(A*y_template))/sig_GS)**2) )
+        return chi,A
 
-def shifter(data,y_vals,velocity):
+def shifter(data,velocity):
         shifted = np.zeros(len(data))
         for i in range(len(data)):
                 shifted[i] = data[i] + (velocity*data[i])
@@ -31,71 +33,60 @@ temp_x,temp_y,temp_err = temp[:,0],temp[:,1],temp[:,2]
 
 test_data = ['gs2000_01','gs2000_02','gs2000_03','gs2000_04','gs2000_05','gs2000_06','gs2000_07','gs2000_08','gs2000_09','gs2000_10','gs2000_11','gs2000_12','gs2000_13']
 
-data = []
-for i in range(len(test_data)):
-        data.append(data_loader(test_data[i]))
-data = np.array(data)
-
-test = data_loader(test_data[1])
-testx,testy,testerr = test[:,0],test[:,1],test[:,2]
-
 ###     Testing the velocity change effects     ###############################
+
 plt.figure()
 plt.subplot(311)
 plt.plot(temp_x,temp_y,'k')
 plt.subplot(312)
 plt.plot(temp_x,temp_y,'k')
-plt.plot(shifter(temp_x,temp_y,0.00001),temp_y,'b',alpha=0.3)
+plt.plot(shifter(temp_x,0.02),temp_y,'b',alpha=0.3)
 plt.ylabel('I')
 plt.subplot(313)
 plt.plot(temp_x,temp_y,'k')
-plt.plot(shifter(temp_x,temp_y,-0.00001),temp_y,'r',alpha=0.3)
+plt.plot(shifter(temp_x,-0.02),temp_y,'r',alpha=0.3)
 plt.xlabel('$\lambda / \AA$')
-###############################################################################
-
-###     Spline function calculator      #######################################
-
-x = shifter(temp_x,temp_y,-0.25)
-
-x_new = np.linspace((x[0]-10),(x[-1]+10),10000)
-
-f = InterpolatedUnivariateSpline(x, temp_y, k=3)
-
-new_y = f(x_new)
-new_y[np.where(x_new < testx[0])] = 0
-new_y[np.where(x_new > testx[-1])] = 0
 
 ###############################################################################
-'''
 
-for k in range(len(data)):
+shift_space = np.arange(-0.01,0.01,0.00001)
 
-        testx,testy,testerr = splitter(data[k][:-1,0],data[k][:-1,1],data[k][:-1,2],60)
-        testx = testx[11]
-        testy = testy[11]
-        testerr = testerr[11]
+###############################################################################
+
+all_shifts = []
+
+for j in range(len(test_data)):
+        print(((j/len(test_data))*100),'%')
+        chi_vals = []
+        A_vals = []
+        test = data_loader(test_data[j])
+        testx,testy,testerr = test[:,0],test[:,1],test[:,2]
+#        ind = np.where(testy >= 0.)
+#        testy[ind] = 0
+        for i in range(len(shift_space)):
+                x = shifter(temp_x,shift_space[i])
+                f = InterpolatedUnivariateSpline(x, temp_y, k=3)
+                new_y = f(testx)
+#                ind = np.where(new_y >= 0.)
+#                new_y[ind] = 0
+                new_y[np.where(testx < x[0])] = 0
+                new_y[np.where(testx > x[-1])] = 0
+                chi,A = chi_squared(testy,new_y,testerr)
+                A_vals.append(A)
+                if j == 1:
+                        if i == 500:
+                                plt.figure()
+                                plt.plot(testx,testy,'r')
+                                plt.plot(testx,new_y*A,'g')
+                chi_vals.append(chi)
+        maxim = shift_space[np.argmin(chi_vals)]
+        all_shifts.append(maxim)
         
 
-        
-        offset = np.arange(-30,30,0.1)
-        
-        chi_vals_all = []
-        for j in range(len(testx)):
-                chi_vals = []
-                for i in range(len(offset)):
-                        chi_vals.append(chi_squared(testy[j],tempy[j]+offset[i],testerr[j]))
-                chi_vals_all.append(np.array(chi_vals))
-        
-        chi_vals_all = np.array(chi_vals_all)
-        
-        offset_locs = []
-        for i in range(len(chi_vals_all)):
-                offset_locs.append(offset[np.argmin(chi_vals_all[i])])
-                
-        offsets.append(np.mean(offset_locs))
-        std_offsets.append(np.std(offset_locs))
- 
-x = np.arange(1,len(offsets)+1,1)        
-plt.figure()        
-plt.plot(x,offsets)
-'''
+plt.figure()
+
+###############################################################################
+
+phase = np.array([-0.1405 ,-0.0583,0.0325,0.0998,0.1740,0.2310,0.3079,0.3699,0.4388,0.5008,0.5698,0.6371,0.7276]) 
+plt.plot(phase,all_shifts)
+plt.xlabel('Phase/$\phi$')
