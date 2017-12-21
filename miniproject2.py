@@ -49,11 +49,13 @@ plt.xlabel('$\lambda / \AA$')
 
 ###############################################################################
 
-shift_space = np.arange(-0.01,0.01,0.00001)
+shift_space = np.arange(-0.003,0.003,0.000001)
 
 ###############################################################################
 
 all_shifts = []
+plus_sigma = []
+minus_sigma = []
 
 for j in range(len(test_data)):
         print(((j/len(test_data))*100),'%')
@@ -71,22 +73,30 @@ for j in range(len(test_data)):
 #                new_y[ind] = 0
                 new_y[np.where(testx < x[0])] = 0
                 new_y[np.where(testx > x[-1])] = 0
+                
                 chi,A = chi_squared(testy,new_y,testerr)
                 A_vals.append(A)
-                if j == 1:
-                        if i == 500:
-                                plt.figure()
-                                plt.plot(testx,testy,'r')
-                                plt.plot(testx,new_y*A,'g')
                 chi_vals.append(chi)
+                
+        if j == 1:
+
+                plt.figure()
+                plt.plot(shift_space,chi_vals,'k-')
+                                
+        minimum = np.min(chi_vals)
+        ind = np.where(chi_vals<(minimum+1))
+        plus_sigma.append(shift_space[np.max(ind)])
+        minus_sigma.append(shift_space[np.min(ind)])
+
         maxim = shift_space[np.argmin(chi_vals)]
         all_shifts.append(maxim)
         
-
+##############################################################################
 plt.figure()
-
-###############################################################################
-
 phase = np.array([-0.1405 ,-0.0583,0.0325,0.0998,0.1740,0.2310,0.3079,0.3699,0.4388,0.5008,0.5698,0.6371,0.7276]) 
-plt.plot(phase,all_shifts)
+plt.errorbar(phase,np.array(all_shifts)*(3e5),yerr=[np.array(minus_sigma)*100000,np.array(plus_sigma)*100000],color='k',fmt='o', markersize=2, capsize=2)
 plt.xlabel('Phase/$\phi$')
+plt.ylabel('Velocity/$kms^{-1}$')
+
+final_data = np.transpose(np.vstack([np.array(all_shifts)*(3e5),np.array(plus_sigma),np.array(minus_sigma)]))
+np.savetxt('velocity_data',final_data,delimiter=' ')
