@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Dec 23 11:01:08 2017
+
+@author: jamesdawson
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+from lmfit import Model
+
+def chi_squared(y,y_template,err):        
+        chi = np.sum( (((y-y_template)/err)**2) )
+        return chi
+
+data = np.loadtxt('velocity_data',delimiter=' ')
+
+x = data[:,0]
+y = data[:,1]
+y_up = data[:,2]
+y_down = data[:,3]
+errs = (y_up + y_down)/2.
+
+def velocity(x,A,B,C):
+        V = A + (B * np.sin(2*np.pi*x)) + (C*np.cos(2*np.pi*x))
+        return V
+
+gmodel = Model(velocity)
+a,b,c = 51,527,-6
+result = gmodel.fit(y, x=x, A=a,B=b,C=c,weights=errs)
+
+print(result.fit_report())
+
+plt.errorbar(x,y,yerr=[y_up,y_down],color='k',fmt='o', markersize=2, capsize=2)
+plt.plot(x, result.best_fit, 'r--')
+plt.show()
+
+'''
+#plt.figure()
+#plt.errorbar(phase,y,yerr=[y_up,y_down],color='k',fmt='o', markersize=2, capsize=2)
+
+K_x = np.arange(520,540,1)
+K_y = np.arange(-6,4,0.1)
+off = np.arange(40,60,1)
+
+matrix = np.zeros([len(off),len(K_x),len(K_y)])
+
+for k in range(len(off)):
+        print(((k/len(off))*100),'%')
+        for i in range(len(K_x)):
+                for j in range(len(K_y)):
+                        V = off[k] + (K_x[i] * np.sin(2*np.pi*phase)) + (K_y[j]*np.cos(2*np.pi*phase))
+                        chi,A = chi_squared(y,V,y_down)
+                        matrix[k,i,j] = chi
+
+      
+matrix = np.ma.masked_invalid(matrix)
+
+minimum = np.unravel_index(matrix.argmin(), matrix.shape)
+
+plt.figure()
+plt.errorbar(phase,y,yerr=[y_up,y_down],color='k',fmt='o', markersize=2, capsize=2)
+dummy_x = np.linspace(phase[0],phase[-1],1000)
+V = off[minimum[0]] + (K_x[minimum[1]] * np.sin(2*np.pi*dummy_x)) + (K_y[minimum[2]]*np.cos(2*np.pi*dummy_x))
+plt.plot(dummy_x,V,'r--')
+'''

@@ -82,6 +82,9 @@ for j in range(len(test_data)):
 
                 plt.figure()
                 plt.plot(shift_space,chi_vals,'k-')
+                plt.xlabel('Velocity shift (Vc) / $kms^{-1}$ ')
+                plt.ylabel('$\chi^{2}$')
+                plt.savefig('Chi_example')
                                 
         minimum = np.min(chi_vals)
         ind = np.where(chi_vals<(minimum+1))
@@ -94,9 +97,10 @@ for j in range(len(test_data)):
 ##############################################################################
 plt.figure()
 phase = np.array([-0.1405 ,-0.0583,0.0325,0.0998,0.1740,0.2310,0.3079,0.3699,0.4388,0.5008,0.5698,0.6371,0.7276]) 
-plt.errorbar(phase,np.array(all_shifts)*(3e5),yerr=[np.array(minus_sigma)*100000,np.array(plus_sigma)*100000],color='k',fmt='o', markersize=2, capsize=2)
+plt.errorbar(phase,np.array(all_shifts)*(3e5),yerr=[np.array(minus_sigma)*(3e5),np.array(plus_sigma)*(3e5)],color='k',fmt='o', markersize=2, capsize=2)
 plt.xlabel('Phase/$\phi$')
 plt.ylabel('Velocity/$kms^{-1}$')
+plt.savefig('Radial Velocity Curve For GS2000')
 
-final_data = np.transpose(np.vstack([np.array(all_shifts)*(3e5),np.array(plus_sigma),np.array(minus_sigma)]))
+final_data = np.transpose(np.vstack([phase,np.array(all_shifts)*(3e5),np.array(plus_sigma)*(3e5),np.array(minus_sigma)*(3e5)]))
 np.savetxt('velocity_data',final_data,delimiter=' ')
