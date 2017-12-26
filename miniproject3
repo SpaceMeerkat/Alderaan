@@ -34,34 +34,58 @@ print(result.fit_report())
 
 plt.errorbar(x,y,yerr=[y_up,y_down],color='k',fmt='o', markersize=2, capsize=2)
 plt.plot(x, result.best_fit, 'r--')
-plt.show()
 
-'''
-#plt.figure()
-#plt.errorbar(phase,y,yerr=[y_up,y_down],color='k',fmt='o', markersize=2, capsize=2)
+off = 18.4905765
+off_err = 4.961134 
+kx = 528.952789
+kx_err = 5.863505
+ky = 4.25368356
+ky_err = 8.955140
 
-K_x = np.arange(520,540,1)
-K_y = np.arange(-6,4,0.1)
-off = np.arange(40,60,1)
+K = np.sqrt((kx**2)+(ky**2))
+K_err = np.sqrt(((kx+kx_err)**2)+((ky+ky_err)**2)) - K
 
-matrix = np.zeros([len(off),len(K_x),len(K_y)])
+print('Radial velocity semi amplitude: %.2f'% K , ' +/- %.2f' % K_err,'km/s')
 
-for k in range(len(off)):
-        print(((k/len(off))*100),'%')
-        for i in range(len(K_x)):
-                for j in range(len(K_y)):
-                        V = off[k] + (K_x[i] * np.sin(2*np.pi*phase)) + (K_y[j]*np.cos(2*np.pi*phase))
-                        chi,A = chi_squared(y,V,y_down)
-                        matrix[k,i,j] = chi
+Period = 0.3440915*24.*60.*60.
+ 
+def f_Mx(P,K):
+        G = 6.67e-11
+        return (P*((K*1000)**3))/(2*np.pi*G)
 
-      
-matrix = np.ma.masked_invalid(matrix)
+M_sun = 1.98e30
 
-minimum = np.unravel_index(matrix.argmin(), matrix.shape)
+f_mx = f_Mx(Period,K)/M_sun
+f_mx_err = (f_Mx(Period,K+K_err)-f_Mx(Period,K)) / M_sun
 
+print('f(Mx) = %.2f' %f_mx, ' +/- %.2f' % f_mx_err)
+
+M_k5 = 0.625
+M_k5_err = 0.8-M_k5
+
+###     Assuming the compact object is massive compared to the companion ######
+
+def Mass_x(f,mass_temp,angle):
+        mass_a = f/(np.sin(angle)**3)
+        mass = mass_a**(1./3.)
+        return mass_a,mass
+
+a = 90./90.
+Mx_a,Mx = Mass_x(f_mx,M_k5,a)
+Mx_err_a, Mx_err = Mass_x(f_mx+f_mx_err,M_k5+M_k5_err,a) - Mx      
+
+print('Mx at i= %.2f'%(a*90.),' degrees = %.2f'% Mx,' +/- %.2f' % Mx_err, 'M_solar')
+
+a = np.linspace(0.1,1.,1000)
+m = np.zeros(len(a))
+
+for i in range(len(a)):
+        mx_a,mx= Mass_x(f_mx,M_k5,a[i])
+        m[i] = mx
 plt.figure()
-plt.errorbar(phase,y,yerr=[y_up,y_down],color='k',fmt='o', markersize=2, capsize=2)
-dummy_x = np.linspace(phase[0],phase[-1],1000)
-V = off[minimum[0]] + (K_x[minimum[1]] * np.sin(2*np.pi*dummy_x)) + (K_y[minimum[2]]*np.cos(2*np.pi*dummy_x))
-plt.plot(dummy_x,V,'r--')
-'''
+
+plt.plot(a*90.,m,'k')
+
+plt.xlabel('Angle/ $^o$')
+plt.ylabel('Compact Object Mass/ M_solar')
+
