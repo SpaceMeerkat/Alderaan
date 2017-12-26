@@ -17,6 +17,7 @@ def chi_squared(y,y_template,err):
 data = np.loadtxt('velocity_data',delimiter=' ')
 
 x = data[:,0]
+diff_t = np.mean(np.diff(x))*60*60*24
 y = data[:,1]
 y_up = data[:,2]
 y_down = data[:,3]
@@ -34,6 +35,8 @@ print(result.fit_report())
 
 plt.errorbar(x,y,yerr=[y_up,y_down],color='k',fmt='o', markersize=2, capsize=2)
 plt.plot(x, result.best_fit, 'r--')
+plt.xlabel('Binary phase/ $\phi$')
+plt.ylabel('Radial Velocity/ $kms^{-1}$')
 
 off = 18.4905765
 off_err = 4.961134 
@@ -72,7 +75,7 @@ def Mass_x(f,mass_temp,angle):
 
 a = 90./90.
 Mx_a,Mx = Mass_x(f_mx,M_k5,a)
-Mx_err_a, Mx_err = Mass_x(f_mx+f_mx_err,M_k5+M_k5_err,a) - Mx      
+Mx_err_a, Mx_err = Mass_x(f_mx+f_mx_err,M_k5,a) - Mx      
 
 print('Mx at i= %.2f'%(a*90.),' degrees = %.2f'% Mx,' +/- %.2f' % Mx_err, 'M_solar')
 
@@ -88,4 +91,112 @@ plt.plot(a*90.,m,'k')
 
 plt.xlabel('Angle/ $^o$')
 plt.ylabel('Compact Object Mass/ M_solar')
+
+### Inclination random generator for calculating mean nd std ###
+
+inc = np.random.uniform(0,90,100000)
+inc_std = np.std(inc)
+
+
+def Norm(mean,stdev,x):        
+        A = 1./ np.sqrt( ( 2*np.pi*(stdev**2) ) )
+        output =  A* (np.exp( - ((x-mean)**2)/(2*(stdev**2)) ))
+        return output
+
+###############################################################################
+
+def sampler(a,b,N,start_pos,Gauss=False):
+        if Gauss ==  False:
+                return np.array(np.random.uniform(a,b,N))
+        else:
+                location = [start_pos]
+
+                for i in range(N+1000):
+                        
+                        m = a
+                        std = b
+                        
+                        step = std/10.
+                        
+                        t = np.random.uniform(-1,1)
+                        
+                        ### Determining whether walk moves in positive or negative direction ###
+                        
+                        if t < 0:
+                                move = -step
+                        else:
+                                move = step
+                                
+                        ### Determining whether the walk is allowed or remains at the same x location ###
+                
+                        if Norm(m,std,(location[i] + move)) > Norm(m,std,(location[i])):
+                                location.append(location[i] + move)
+                        else:
+                                p_move = Norm(m,std,(location[i] + move))/Norm(m,std,(location[i]))
+                                rand = np.random.uniform(0,1)
+                                 
+                                if p_move >= rand:
+                                        location.append(location[i] + move)
+                                else:
+                                        location.append(location[i])
+                                        
+                for i in range(len(location)):
+    
+        ### If the user chooses a starting location less than the mean of the posterior ###
+        
+                        if location[0] < np.mean(location[int((len(location)/2.)):]):
+                                if np.mean(location[(100*i):((100*i)+100)]) >= np.mean(location[int((len(location)/2.)):]) - (std/10.):
+                                        cut = 100*i
+                                        break
+                                        
+                        ### Just in case the user chooses a starting location greater than the mean of the posterior ###
+                        
+                        else:
+                                if np.mean(location[(100*i):((100*i)+100)]) <= np.mean(location[int((len(location)/2.)):]) + (std/10.):
+                                        cut = 100*i
+                                        break
+                        
+                        ### New location array removes the burn in period ###
+                        
+                location_cut = location[cut:]
+                
+                return np.array(location_cut)
+                
+###############################################################################
+                
+K_samples = sampler(K,K_err,100000,K-50,Gauss=True)[-100000:]
+P_samples = sampler(Period,diff_t,100000,Period+50,Gauss=True)[-100000:]
+i_samples = sampler(0.01,1.,100000,0,Gauss = False)
+#completely at 0 degrees gives false data so we just go very close
+Mc_samples = sampler(M_k5-M_k5_err,M_k5+M_k5_err,100000,0,Gauss=False)
+
+plt.figure()
+plt.subplot(411)
+plt.hist(K_samples,bins=20)
+plt.subplot(412)
+plt.hist(P_samples,bins=20)
+plt.subplot(413)
+plt.hist(i_samples,bins=20)
+plt.subplot(414)
+plt.hist(Mc_samples,bins=20)
+
+###############################################################################
+
+m= []
+
+for j in range(len(K_samples)):
+        f = f_Mx(P_samples[j],K_samples[j])/M_sun
+        m_a,mass = Mass_x(f,Mc_samples[j],i_samples[j])
+        m.append(mass)
+        
+plt.figure()
+plt.subplot(211)
+plt.hist(m,bins=100)
+plt.subplot(212)
+x = np.linspace(0,200,1000)
+plt.plot(x,Norm(np.mean(m),np.std(m),x))
+
+
+
+
 
