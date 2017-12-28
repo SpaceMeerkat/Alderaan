@@ -40,11 +40,11 @@ plt.subplot(311)
 plt.plot(temp_x,temp_y,'k')
 plt.subplot(312)
 plt.plot(temp_x,temp_y,'k')
-plt.plot(shifter(temp_x,0.02),temp_y,'b',alpha=0.3)
+plt.plot(shifter(temp_x,0.3),temp_y,'r',alpha=0.3)
 plt.ylabel('I')
 plt.subplot(313)
 plt.plot(temp_x,temp_y,'k')
-plt.plot(shifter(temp_x,-0.02),temp_y,'r',alpha=0.3)
+plt.plot(shifter(temp_x,-0.3),temp_y,'b',alpha=0.3)
 plt.xlabel('$\lambda / \AA$')
 
 ###############################################################################

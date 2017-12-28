@@ -9,6 +9,8 @@ Created on Sat Dec 23 11:01:08 2017
 import numpy as np
 import matplotlib.pyplot as plt
 from lmfit import Model
+from scipy.integrate import quad
+
 
 def chi_squared(y,y_template,err):        
         chi = np.sum( (((y-y_template)/err)**2) )
@@ -37,6 +39,8 @@ plt.errorbar(x,y,yerr=[y_up,y_down],color='k',fmt='o', markersize=2, capsize=2)
 plt.plot(x, result.best_fit, 'r--')
 plt.xlabel('Binary phase/ $\phi$')
 plt.ylabel('Radial Velocity/ $kms^{-1}$')
+
+plt.savefig('Velocity curve fit')
 
 off = 18.4905765
 off_err = 4.961134 
@@ -171,14 +175,26 @@ i_samples = sampler(0.01,1.,100000,0,Gauss = False)
 Mc_samples = sampler(M_k5-M_k5_err,M_k5+M_k5_err,100000,0,Gauss=False)
 
 plt.figure()
-plt.subplot(411)
+plt.subplot(121)
 plt.hist(K_samples,bins=20)
-plt.subplot(412)
+plt.xlabel('Radial Velocity / $kms^{-1}$')
+plt.ylabel('N')
+plt.subplot(122)
 plt.hist(P_samples,bins=20)
-plt.subplot(413)
+plt.xlabel('Period / Days')
+plt.ylabel('N')
+plt.savefig('variable distributions1')
+plt.figure()
+plt.subplot(121)
+plt.ylabel('N')
+plt.xlabel('$Inclination / ^{o}$')
 plt.hist(i_samples,bins=20)
-plt.subplot(414)
+plt.subplot(122)
+plt.ylabel('N')
+plt.xlabel('$Mass / M_{\odot}$')
 plt.hist(Mc_samples,bins=20)
+
+plt.savefig('variable distributions2')
 
 ###############################################################################
 
@@ -192,9 +208,34 @@ for j in range(len(K_samples)):
 plt.figure()
 plt.subplot(211)
 plt.hist(m,bins=100)
+plt.ylabel('N')
+plt.xlim(0,125)
 plt.subplot(212)
+
+mid = Norm(np.mean(m),np.std(m),np.mean(m))
+std = Norm(np.mean(m),np.std(m),np.mean(m)+np.std(m))
+plt.plot([np.mean(m),np.mean(m)],[0,mid],'r-')
+plt.plot([np.mean(m)+np.std(m),np.mean(m)+np.std(m)],[0,std],'r-')
+
 x = np.linspace(0,200,1000)
 plt.plot(x,Norm(np.mean(m),np.std(m),x))
+plt.xlabel('Compact object mass/ M_solar')
+plt.ylabel('$P(M_{x}|i,K,P,M_{c})$')
+plt.ylim(0,0.03)
+plt.xlim(0,125)
+
+plt.savefig('Mx posterior')
+
+I = quad(Norm, -(10000), (10000) , args=(np.mean(m),np.std(m)))
+sum_total = I[0] - I[1]
+
+I_three_above = quad(Norm, 3, 10000 , args=(np.mean(m),np.std(m)))
+I_above = I_three_above[0] - I_three_above[1]
+print('P(Mx > 3 solar masses) = %.2f'%I_above)
+
+I_three_below = quad(Norm, -10000, 3 , args=(np.mean(m),np.std(m)))
+I_below = I_three_below[0] - I_three_below[1]
+print('P(Mx < 3 solar masses) = %.2f'%I_above)
 
 
 
